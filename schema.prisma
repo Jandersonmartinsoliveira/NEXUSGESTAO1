@@ -1,0 +1,161 @@
+
+generator client { provider = "prisma-client-js" }
+datasource db { provider = "postgresql" url = env("DATABASE_URL") }
+
+model Company {
+  id        String   @id @default(cuid())
+  name      String
+  document  String?  @unique
+  email     String?
+  phone     String?
+  address   String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  users     User[]
+  products  Product[]
+  customers Customer[]
+  suppliers Supplier[]
+  sales     Sale[]
+  purchases Purchase[]
+  finance   FinanceEntry[]
+  movements StockMovement[]
+  auditLogs AuditLog[]
+}
+
+model User {
+  id           String @id @default(cuid())
+  companyId    String
+  name         String
+  email        String
+  passwordHash String
+  role         Role @default(VENDEDOR)
+  active       Boolean @default(true)
+  createdAt    DateTime @default(now())
+  company      Company @relation(fields:[companyId], references:[id], onDelete:Cascade)
+  @@unique([companyId,email])
+}
+
+enum Role { ADMIN GERENTE VENDEDOR FINANCEIRO ESTOQUE }
+
+model Product {
+  id        String @id @default(cuid())
+  companyId String
+  sku       String
+  name      String
+  category  String?
+  cost      Decimal @db.Decimal(14,2)
+  price     Decimal @db.Decimal(14,2)
+  stock     Int @default(0)
+  minStock  Int @default(0)
+  active    Boolean @default(true)
+  company   Company @relation(fields:[companyId], references:[id], onDelete:Cascade)
+  movements StockMovement[]
+  saleItems SaleItem[]
+  purchaseItems PurchaseItem[]
+  @@unique([companyId,sku])
+}
+
+model Customer {
+  id        String @id @default(cuid())
+  companyId String
+  name      String
+  document  String?
+  phone     String?
+  email     String?
+  address   String?
+  company   Company @relation(fields:[companyId], references:[id], onDelete:Cascade)
+  sales     Sale[]
+  purchases Purchase[]
+}
+
+model Supplier {
+  id        String @id @default(cuid())
+  companyId String
+  name      String
+  document  String?
+  phone     String?
+  email     String?
+  company   Company @relation(fields:[companyId], references:[id], onDelete:Cascade)
+}
+
+model Sale {
+  id          String @id @default(cuid())
+  companyId   String
+  customerId  String?
+  payment     String
+  status      String @default("PAID")
+  total       Decimal @db.Decimal(14,2)
+  createdAt   DateTime @default(now())
+  company     Company @relation(fields:[companyId], references:[id], onDelete:Cascade)
+  customer    Customer? @relation(fields:[customerId], references:[id])
+  items       SaleItem[]
+}
+
+model SaleItem {
+  id        String @id @default(cuid())
+  saleId    String
+  productId String
+  qty       Int
+  unitPrice Decimal @db.Decimal(14,2)
+  sale      Sale @relation(fields:[saleId], references:[id], onDelete:Cascade)
+  product   Product @relation(fields:[productId], references:[id])
+}
+
+model FinanceEntry {
+  id          String @id @default(cuid())
+  companyId   String
+  type        String
+  category    String
+  description String?
+  value       Decimal @db.Decimal(14,2)
+  dueDate     DateTime?
+  paidAt      DateTime?
+  createdAt   DateTime @default(now())
+  company     Company @relation(fields:[companyId], references:[id], onDelete:Cascade)
+}
+
+model StockMovement {
+  id        String @id @default(cuid())
+  companyId String
+  productId String
+  type      String
+  qty       Int
+  reason    String?
+  createdAt DateTime @default(now())
+  company   Company @relation(fields:[companyId], references:[id], onDelete:Cascade)
+  product   Product @relation(fields:[productId], references:[id])
+}
+
+model AuditLog {
+  id        String @id @default(cuid())
+  companyId String
+  userId    String?
+  action    String
+  entity    String?
+  entityId  String?
+  metadata  String?
+  createdAt DateTime @default(now())
+  company   Company @relation(fields:[companyId], references:[id], onDelete:Cascade)
+}
+
+model Purchase {
+  id         String @id @default(cuid())
+  companyId  String
+  supplierId String?
+  status     String @default("RECEIVED")
+  total      Decimal @db.Decimal(14,2)
+  createdAt  DateTime @default(now())
+  company    Company @relation(fields:[companyId], references:[id], onDelete:Cascade)
+  supplier   Supplier? @relation(fields:[supplierId], references:[id])
+  items      PurchaseItem[]
+}
+
+model PurchaseItem {
+  id         String @id @default(cuid())
+  purchaseId String
+  productId  String
+  qty        Int
+  unitCost   Decimal @db.Decimal(14,2)
+  purchase   Purchase @relation(fields:[purchaseId], references:[id], onDelete:Cascade)
+  product    Product @relation(fields:[productId], references:[id])
+}

@@ -1,0 +1,24 @@
+services:
+  db:
+    image: postgres:16
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: nexus
+      POSTGRES_PASSWORD: nexus
+      POSTGRES_DB: nexus_gestao
+    ports:
+      - "5432:5432"
+    volumes:
+      - nexus_pg:/var/lib/postgresql/data
+  api:
+    build: ./backend
+    environment:
+      DATABASE_URL: postgresql://nexus:nexus@db:5432/nexus_gestao?schema=public
+      JWT_SECRET: CHANGE_ME_IN_PRODUCTION
+      PORT: 3333
+    depends_on:
+      - db
+    ports:
+      - "3333:3333"
+volumes:
+  nexus_pg:
